@@ -14,6 +14,7 @@ int main() {
 
     struct sockaddr_in clientAddress;
     int clientAddressSize = sizeof(struct sockaddr_in);
+    // socklen_t clientAddressSize = sizeof(clientAddress);
     int clientSocketFD = accept(serverSocketFD, (struct sockaddr*) &clientAddress, &clientAddressSize) ;
     // accept() returns a new socket file descriptor for the accepted connection
     // the new socket is used to send and receive data to/from the client
