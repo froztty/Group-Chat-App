@@ -23,8 +23,23 @@ int main() {
     //FD of client will be returned
 
     char buffer[1024];
-    recv(clientSocketFD, buffer, 1024, 0);
-    printf("Received message from client: %s\n", buffer);
 
+    while (true)
+    {
+        memset(buffer, 0, sizeof(buffer));
+        ssize_t amountReceived = recv(clientSocketFD, buffer, sizeof(buffer) - 1, 0);
+        
+        if(amountReceived > 0){
+            buffer[amountReceived] = '\0';
+            printf("Received message from client: %s\n", buffer);
+        }
+            
+        if(amountReceived == 0){
+            break;
+        }
+        
+    }
+    close(clientSocketFD);
+    shutdown(serverSocketFD, SHUT_RDWR);
     return 0;
 }
