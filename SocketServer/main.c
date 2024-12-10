@@ -1,5 +1,17 @@
 #include "../SocketUtil/socketutil.h"
 
+struct AcceptedSocket
+{
+    int acceptedSocketFD;
+    struct sockaddr_in address;
+    int error;
+    bool acceptedSucess;
+};
+
+struct AcceptedSocket * acceptIncomingConnection(int serverSocketFD);
+
+void receivePrintIncomingData(int socketFD);
+
 int main() {
     int serverSocketFD = createTCPIPv4Socket();
     struct sockaddr_in *serverAddress = createIPv4Address("", 2000);
@@ -12,6 +24,16 @@ int main() {
     // 10 is the backlog amount for incoming sockets connecting to server
     // 0 = success
 
+    struct AcceptedSocket* clientSocket = acceptIncomingConnection(serverSocketFD);
+
+    receivePrintIncomingData(clientSocket->acceptedSocketFD);
+
+    close(clientSocket->acceptedSocketFD);
+    shutdown(serverSocketFD, SHUT_RDWR);
+    return 0;
+}
+
+struct AcceptedSocket * acceptIncomingConnection(int serverSocketFD){
     struct sockaddr_in clientAddress;
     int clientAddressSize = sizeof(struct sockaddr_in);
     // socklen_t clientAddressSize = sizeof(clientAddress);
@@ -22,12 +44,23 @@ int main() {
     //requires the pointer of the size rather than just size
     //FD of client will be returned
 
+    struct AcceptedSocket* acceptedSocket = malloc(sizeof(struct AcceptedSocket));
+    acceptedSocket->address = clientAddress;
+    acceptedSocket->acceptedSocketFD = clientSocketFD;
+    acceptedSocket->acceptedSucess = clientSocketFD > 0;
+
+    if(!acceptedSocket->acceptedSucess)
+        acceptedSocket->error = clientSocketFD; 
+    return acceptedSocket;
+}
+
+void receivePrintIncomingData(int socketFD){
     char buffer[1024];
 
     while (true)
     {
         memset(buffer, 0, sizeof(buffer));
-        ssize_t amountReceived = recv(clientSocketFD, buffer, sizeof(buffer) - 1, 0);
+        ssize_t amountReceived = recv(socketFD, buffer, sizeof(buffer) - 1, 0);
         
         if(amountReceived > 0){
             buffer[amountReceived] = '\0';
@@ -39,7 +72,5 @@ int main() {
         }
         
     }
-    close(clientSocketFD);
-    shutdown(serverSocketFD, SHUT_RDWR);
-    return 0;
+    close(socketFD);
 }
