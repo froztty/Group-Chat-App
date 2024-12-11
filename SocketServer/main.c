@@ -16,10 +16,15 @@ void startAcceptingIncomingConnections(int serverSocketFD);
 
 void receivePrintIncomingDataonSeparateThread(struct AcceptedSocket *pSocket);
 
+struct AcceptedSocket acceptedSockets[10];
+int acceptedSocketsCount = 0;
+
 void startAcceptingIncomingConnections(int serverSocketFD){
     while(true)
     {
         struct AcceptedSocket* clientSocket = acceptIncomingConnection(serverSocketFD);
+        acceptedSockets[acceptedSocketsCount++] = *clientSocket;
+        
         receivePrintIncomingDataonSeparateThread(clientSocket);
     }
 }
@@ -27,6 +32,35 @@ void startAcceptingIncomingConnections(int serverSocketFD){
 void receivePrintIncomingDataonSeparateThread(struct AcceptedSocket *pSocket){
     pthread_t id;
     pthread_create(&id, NULL, receivePrintIncomingData, pSocket->acceptedSocketFD);
+}
+
+void receivePrintIncomingData(int socketFD){
+    char buffer[1024];
+
+    while (true)
+    {
+        memset(buffer, 0, sizeof(buffer));
+        ssize_t amountReceived = recv(socketFD, buffer, sizeof(buffer) - 1, 0);
+        
+        if(amountReceived > 0){
+            buffer[amountReceived] = 0;
+            printf("%s\n", buffer);
+
+            sendToOtherClients(buffer, socketFD);
+        }
+        if(amountReceived == 0){
+            break;
+        }
+    }
+    close(socketFD);
+}
+
+void sendToOtherClients(char *buffer, int socketFD){
+    for(int i = 0; i < acceptedSocketsCount; i++)
+        if(acceptedSockets[i].acceptedSocketFD != socketFD)
+        {
+            send(acceptedSockets[i].acceptedSocketFD, buffer, strlen(buffer), 0);
+        }
 }
 
 struct AcceptedSocket * acceptIncomingConnection(int serverSocketFD){
@@ -48,27 +82,6 @@ struct AcceptedSocket * acceptIncomingConnection(int serverSocketFD){
     if(!acceptedSocket->acceptedSucess)
         acceptedSocket->error = clientSocketFD; 
     return acceptedSocket;
-}
-
-void receivePrintIncomingData(int socketFD){
-    char buffer[1024];
-
-    while (true)
-    {
-        memset(buffer, 0, sizeof(buffer));
-        ssize_t amountReceived = recv(socketFD, buffer, sizeof(buffer) - 1, 0);
-        
-        if(amountReceived > 0){
-            buffer[amountReceived] = '\0';
-            printf("Received message from client: %s\n", buffer);
-        }
-            
-        if(amountReceived == 0){
-            break;
-        }
-        
-    }
-    close(socketFD);
 }
 
 int main() {

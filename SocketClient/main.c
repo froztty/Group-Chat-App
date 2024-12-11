@@ -1,5 +1,9 @@
 #include "../SocketUtil/socketutil.h"
 
+void startListenPrintThread(int fd);
+
+void listenPrint(int socketFD);
+
 int main() {
     int socketFD = createTCPIPv4Socket();
     //address family i net (ipv4)
@@ -10,7 +14,7 @@ int main() {
     struct sockaddr_in *address = createIPv4Address("127.0.0.1", 2000);
 
     int result = connect(socketFD, (struct sockaddr*)address, sizeof(*address));
-    printf("Result: %d", result);
+
     if (result < 0) {
         perror("Connection failed");
         close(socketFD);
@@ -19,21 +23,9 @@ int main() {
     if(result == 0)
         printf("connection is sucessful\n");
 
-    char *line = NULL;
-    size_t len = 0;
-    printf("type here(or exit)...\n");
+    startListenPrintThread(socketFD);
 
-    while(true)
-    {
-        ssize_t charCount = getline(&line, &len, stdin);
-        if(charCount > 0)
-        {
-            if(strcmp(line,"exit\n") == 0)
-                break;
-            ssize_t amountSent = send(socketFD, line, charCount, 0);
-        }
-        
-    }
+    readUserInput(socketFD);
 
     // char* message;
     // message = "GET \\ HTTP/1.1\r\nHost:google.com\r\n\r\n";
@@ -45,8 +37,61 @@ int main() {
     
     // printf("response was %s \n", buffer);
 
-    free(line);
     close(socketFD);
 
     return 0;
+}
+
+void readUserInput(int socketFD){
+    char *name = NULL;
+    size_t nameLen = 0;
+    printf("Please enter your name:\n");
+    ssize_t nameCount = getline(&name, &nameLen, stdin);
+    name[nameCount-1] = 0;
+
+    char *line = NULL;
+    size_t len = 0;
+    printf("type here(or exit)...\n");
+
+    char buffer[1024];
+
+    while(true)
+    {
+        ssize_t charCount = getline(&line, &len, stdin);
+
+        sprintf(buffer, "%s: %s", name, line);
+        if(charCount > 0)
+        {
+            if(strcmp(line,"exit\n") == 0)
+                break;
+            ssize_t amountSent = send(socketFD, buffer, strlen(buffer), 0);
+        }
+    }
+    free(line);
+    free(name);
+}
+
+void startListenPrintThread(int socketFD){
+    pthread_t id;
+    pthread_create(&id, NULL, listenPrint, (void*)socketFD);
+}
+
+void listenPrint(int socketFD){
+    char buffer[1024];
+
+    while (true)
+    {
+        memset(buffer, 0, sizeof(buffer));
+        ssize_t amountReceived = recv(socketFD, buffer, sizeof(buffer) - 1, 0);
+        
+        if(amountReceived > 0){
+            buffer[amountReceived] = '\0';
+            printf("%s\n", buffer);
+        }
+            
+        if(amountReceived == 0){
+            break;
+        }
+    }
+    close(socketFD);
 }
