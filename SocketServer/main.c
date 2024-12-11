@@ -12,25 +12,21 @@ struct AcceptedSocket * acceptIncomingConnection(int serverSocketFD);
 
 void receivePrintIncomingData(int socketFD);
 
-int main() {
-    int serverSocketFD = createTCPIPv4Socket();
-    struct sockaddr_in *serverAddress = createIPv4Address("", 2000);
+void startAcceptingIncomingConnections(int serverSocketFD);
 
-    int result = bind(serverSocketFD, (struct sockaddr*) serverAddress, sizeof(*serverAddress));
-    if (result == 0)
-        printf("socket was bound successfully\n");
+void receivePrintIncomingDataonSeparateThread(struct AcceptedSocket *pSocket);
 
-    int listenResult = listen(serverSocketFD, 10);
-    // 10 is the backlog amount for incoming sockets connecting to server
-    // 0 = success
+void startAcceptingIncomingConnections(int serverSocketFD){
+    while(true)
+    {
+        struct AcceptedSocket* clientSocket = acceptIncomingConnection(serverSocketFD);
+        receivePrintIncomingDataonSeparateThread(clientSocket);
+    }
+}
 
-    struct AcceptedSocket* clientSocket = acceptIncomingConnection(serverSocketFD);
-
-    receivePrintIncomingData(clientSocket->acceptedSocketFD);
-
-    close(clientSocket->acceptedSocketFD);
-    shutdown(serverSocketFD, SHUT_RDWR);
-    return 0;
+void receivePrintIncomingDataonSeparateThread(struct AcceptedSocket *pSocket){
+    pthread_t id;
+    pthread_create(&id, NULL, receivePrintIncomingData, pSocket->acceptedSocketFD);
 }
 
 struct AcceptedSocket * acceptIncomingConnection(int serverSocketFD){
@@ -73,4 +69,22 @@ void receivePrintIncomingData(int socketFD){
         
     }
     close(socketFD);
+}
+
+int main() {
+    int serverSocketFD = createTCPIPv4Socket();
+    struct sockaddr_in *serverAddress = createIPv4Address("", 2000);
+
+    int result = bind(serverSocketFD, (struct sockaddr*) serverAddress, sizeof(*serverAddress));
+    if (result == 0)
+        printf("socket was bound successfully\n");
+
+    int listenResult = listen(serverSocketFD, 10);
+    // 10 is the backlog amount for incoming sockets connecting to server
+    // 0 = success
+
+    startAcceptingIncomingConnections(serverSocketFD);
+
+    shutdown(serverSocketFD, SHUT_RDWR);
+    return 0;
 }

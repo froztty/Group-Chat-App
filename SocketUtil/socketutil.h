@@ -10,6 +10,7 @@
 #include <malloc.h>
 #include <unistd.h> // for close()
 #include <stdbool.h>
+#include <pthread.h>
 
 struct sockaddr_in* createIPv4Address(char *ip, int port);
 
