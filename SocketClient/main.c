@@ -1,8 +1,14 @@
 #include "../SocketUtil/socketutil.h"
 
 void startListenPrintThread(int fd);
+/* create a new thread for listening to messages from the server*/
 
 void listenPrint(int socketFD);
+/* listen for incoming messages and print. if recv() returns 0 it breaks loop */
+
+void readUserInput(int socketFD);
+/* This function handles user input by allowing the user to type messages and 
+   send them to the server. Message is sent to the server with name appended.*/
 
 int main() {
     int socketFD = createTCPIPv4Socket();
@@ -43,31 +49,27 @@ int main() {
 }
 
 void readUserInput(int socketFD){
-    char *name = NULL;
-    size_t nameLen = 0;
+    char *name = malloc(100 * sizeof(char)); 
+    if (name == NULL){
+        perror("Failed to allocate memory for name");
+        exit(EXIT_FAILURE);
+    }
     printf("Please enter your name:\n");
-    ssize_t nameCount = getline(&name, &nameLen, stdin);
-    name[nameCount-1] = 0;
+    fgets(name, sizeof(name), stdin);
+    name[strcspn(name, "\n")] = 0; // remove newline char
 
-    char *line = NULL;
-    size_t len = 0;
-    printf("type here(or exit)...\n");
-
+    char line[1024];
     char buffer[1024];
+    printf("type here(or exit)...\n");
 
     while(true)
     {
-        ssize_t charCount = getline(&line, &len, stdin);
-
-        sprintf(buffer, "%s: %s", name, line);
-        if(charCount > 0)
-        {
-            if(strcmp(line,"exit\n") == 0)
-                break;
-            ssize_t amountSent = send(socketFD, buffer, strlen(buffer), 0);
-        }
+        fgets(line, sizeof(line), stdin);
+        line[strcspn(line, "\n")] = 0;
+        sprintf(buffer, "%s: %s", name, line); // appending to buffer
+        snprintf(buffer, sizeof(buffer), "%s: %s", name, line);
+        send(socketFD, buffer, strlen(buffer), 0);
     }
-    free(line);
     free(name);
 }
 

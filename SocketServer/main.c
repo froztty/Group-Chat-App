@@ -9,12 +9,26 @@ struct AcceptedSocket
 };
 
 struct AcceptedSocket * acceptIncomingConnection(int serverSocketFD);
+/* accepts an incoming client connection and returns an AcceptedSocket struct 
+   that contains information about the client. accept() system that is used to 
+   accept an incoming connection request and returns a new socket file 
+   descriptor that is used to communicate with the client. if connection fails
+   then set the error value.*/
 
 void receivePrintIncomingData(int socketFD);
+/* listens for incoming data from a client and prints it to the console. recv()
+   is used to receive data from the client reading up to sizeof(buffer) - 1
+   bytes. When recv() returns 0, it means the client disconnected and the loop 
+   breaks and will close the socket. */
 
 void startAcceptingIncomingConnections(int serverSocketFD);
+/* continueously accept any incoming connections from new clients and creates a 
+   new thread for each new connection. Adding a new client to the list. */
 
 void receivePrintIncomingDataonSeparateThread(struct AcceptedSocket *pSocket);
+/* create a new thread for each client to handle incoming data concurrently. 
+   the function calls receivePrintIncomingData() which will receive and process
+   data from the client asynchronously */
 
 struct AcceptedSocket acceptedSockets[10];
 int acceptedSocketsCount = 0;
@@ -62,6 +76,9 @@ void sendToOtherClients(char *buffer, int socketFD){
             send(acceptedSockets[i].acceptedSocketFD, buffer, strlen(buffer), 0);
         }
 }
+/* sends the received message stored in buffer to all clients but the one that 
+   sent the message. Iterating through acceptedSockets array and check each 
+   client's socket file descriptor. */
 
 struct AcceptedSocket * acceptIncomingConnection(int serverSocketFD){
     struct sockaddr_in clientAddress;
